@@ -1,368 +1,421 @@
 <html>
-	<head>
-		<title>Tournament Bracket Generator</title>
-		<meta charset="utf-8">
 
-				<script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
-				<script src="../static/js/bootstrap.min.js"></script>
-				<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
-				<!-- <LINK href="https://bootswatch.com/slate/bootstrap.min.css" rel="stylesheet" type="text/css"> -->
-						<!-- <link rel="stylesheet" type="text/css" href="/static//css/style.css" > -->
-						<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
-						<!-- <script src="http://code.jquery.com/jquery-1.9.0.js"></script> -->
-		<script src="http://underscorejs.org/underscore-min.js"></script>
-		<script>
-			$(document).on('ready', function() {
+<head>
+  <title>Tournament Bracket Generator</title>
+  <meta charset="utf-8">
 
-var regionList= {{data['regionList'] | safe}};
+  <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+  <script src="../static/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+  <script src="http://underscorejs.org/underscore-min.js"></script>
+  <script>
+    $(document).on('ready', function() {
 
-var knownBrackets = [2,4,8,16,32],
-	teamsLB1 = {{ data['teamNames'][0] | safe}},
-	teamsLB2 = {{ data['teamNames'][1] | safe}},
-	teamsRB1 = {{ data['teamNames'][2] | safe}},
-	teamsRB2 = {{ data['teamNames'][3] | safe}},
-					bracketCount = 0;
-					var seeds = {{ data['seeds']}}
-					var opts = 32; //parseInt(prompt('Bracket size (number of teams):',16));
-					 getBracket(opts,"LB",teamsLB1.concat(teamsLB2),seeds,false);
-					 getBracket(opts,"RB",teamsRB1.concat(teamsRB2),seeds,true);
-					 // getBracket(opts);
-				/*
-				 * Build our bracket "model"
-				 */
-				function getBracket(base,bracketGroup,teams,seeds,reverse) {
+      var regionList = {{ data['regionList'] | safe }};
 
-					var closest 		= _.find(knownBrackets, function(k) { return k>=base; }),
-						byes 			= closest-base;
+      var knownBrackets = [2, 4, 8, 16, 32],
+        teamsLB1 = {{data['teamNames'][0] | safe}},
+        teamsLB2 = {{data['teamNames'][1] | safe}},
+        teamsRB1 = {{data['teamNames'][2] | safe}},
+        teamsRB2 = {{data['teamNames'][3] | safe}},
+        bracketCount = 0;
+      var seeds = {{  data['seeds'] }}
+      var opts = 32; //parseInt(prompt('Bracket size (number of teams):',16));
+      getBracket(opts, "LB", teamsLB1.concat(teamsLB2), seeds, false);
+      getBracket(opts, "RB", teamsRB1.concat(teamsRB2), seeds, true);
+      // getBracket(opts);
+      /*
+       * Build our bracket "model"
+       */
+      function getBracket(base, bracketGroup, teams, seeds, reverse) {
 
-					if(byes>0)	base = closest;
+        var closest = _.find(knownBrackets, function(k) {
+            return k >= base;
+          }),
+          byes = closest - base;
 
-					var brackets 	= [],
-						round 		= 1,
-						baseT 		= base/2,
-						baseC 		= base/2,
-						teamMark	= 0,
-						nextInc		= base/2;
+        if (byes > 0) base = closest;
 
-					for(i=1;i<=(base-1);i++) {
-						var	baseR = i/baseT,
-							isBye = false;
+        var brackets = [],
+          round = 1,
+          baseT = base / 2,
+          baseC = base / 2,
+          teamMark = 0,
+          nextInc = base / 2;
 
-						if(byes>0 && (i%2!=0 || byes>=(baseT-i))) {
-							isBye = true;
-							byes--;
-						}
+        for (i = 1; i <= (base - 1); i++) {
+          var baseR = i / baseT,
+            isBye = false;
 
-						var last = _.map(_.filter(brackets, function(b) { return b.nextGame == i; }), function(b) { return {game:b.bracketNo,teams:b.teamnames}; });
+          if (byes > 0 && (i % 2 != 0 || byes >= (baseT - i))) {
+            isBye = true;
+            byes--;
+          }
 
-						brackets.push({
-							lastGames:	round==1 ? null : [last[0].game,last[1].game],
-							nextGame:	nextInc+i>base-1?null:nextInc+i,
-							teamnames:	round==1 ? [seeds[teamMark%16]+'. '+teams[teamMark],seeds[(teamMark+1) % 16]+'. '+teams[teamMark+1]] : [last[0].teams[_.random(1)],last[1].teams[_.random(1)]],
-							bracketNo:	i,
-							roundNo:	round,
-							bye:		isBye
-						});
-						teamMark+=2;
-						if(i%2!=0)	nextInc--;
-						while(baseR>=1) {
-							round++;
-							baseC/= 2;
-							baseT = baseT + baseC;
-							baseR = i/baseT;
-						}
-					}
-					if (reverse){
-						renderBracketsReverse(brackets,bracketGroup);
-						}
-						else {
-							renderBrackets(brackets,bracketGroup);
-						}
-				}
+          var last = _.map(_.filter(brackets, function(b) {
+            return b.nextGame == i;
+          }), function(b) {
+            return {
+              game: b.bracketNo,
+              teams: b.teamnames
+            };
+          });
 
-				/*
-				 * Inject our brackets
-				 */
-				function renderBrackets(struct,bracketGroup) {
-					var roundNumber	= _.uniq(_.map(struct, function(s) { return s.roundNo; })).length;
-					// var roundNum
-					var group	= $('<div class="group'+(roundNumber+1)+'" id="b'+bracketCount+'"></div>'),
-						grouped = _.groupBy(struct, function(s) { return s.roundNo; });
+          brackets.push({
+            lastGames: round == 1 ? null : [last[0].game, last[1].game],
+            nextGame: nextInc + i > base - 1 ? null : nextInc + i,
+            teamnames: round == 1 ? [seeds[teamMark % 16] + '. ' + teams[teamMark], seeds[(teamMark + 1) % 16] + '. ' + teams[teamMark + 1]] : [last[0].teams[_.random(1)], last[1].teams[_.random(1)]],
+            bracketNo: i,
+            roundNo: round,
+            bye: isBye
+          });
+          teamMark += 2;
+          if (i % 2 != 0) nextInc--;
+          while (baseR >= 1) {
+            round++;
+            baseC /= 2;
+            baseT = baseT + baseC;
+            baseR = i / baseT;
+          }
+        }
+        if (reverse) {
+          renderBracketsReverse(brackets, bracketGroup);
+        } else {
+          renderBrackets(brackets, bracketGroup);
+        }
+      }
 
-					for(iround=1;iround<=roundNumber;iround++) {
-						var round = $('<div class="r'+iround+'"></div>');
-						_.each(grouped[iround], function(game) {
-							if(game.bye)
-								round.append('<div></div>');
-							else
-							round.append('<div><div class="bracketbox"><span class="teama">'+game.teamnames[0]+'</span><span class="teamb">'+game.teamnames[1]+'</span></div></div>');
-							console.log('round = ', game);
-								// round.append('<div><div class="bracketbox"><span class="info">'+game.bracketNo+'</span><span class="teama">'+game.teamnames[0]+'</span><span class="teamb">'+game.teamnames[1]+'</span></div></div>');
-						});
-						group.append(round);
-					}
-					group.append('<div class="r'+(roundNumber+1)+'"><div class="final"><div class="bracketbox"><span class="teamc">'+_.last(struct).teamnames[_.random(1)]+'</span></div></div></div>');
-					$('#'+bracketGroup).append(group);
+      /*
+       * Inject our brackets
+       */
+      function renderBrackets(struct, bracketGroup) {
+        var roundNumber = _.uniq(_.map(struct, function(s) {
+          return s.roundNo;
+        })).length;
+        // var roundNum
+        var group = $('<div class="group' + (roundNumber + 1) + '" id="b' + bracketCount + '"></div>'),
+          grouped = _.groupBy(struct, function(s) {
+            return s.roundNo;
+          });
 
-					bracketCount++;
-					$('html,body').animate({
-						scrollTop: $("#b"+(bracketCount-1)).offset().top
-					});
-				}
+        for (iround = 1; iround <= roundNumber; iround++) {
+          var round = $('<div class="r' + iround + '"></div>');
+          _.each(grouped[iround], function(game) {
+            if (game.bye)
+              round.append('<div></div>');
+            else
+              round.append('<div><div class="bracketbox"><span class="teama">' + game.teamnames[0] + '</span><span class="teamb">' + game.teamnames[1] + '</span></div></div>');
+            console.log('round = ', game);
+            // round.append('<div><div class="bracketbox"><span class="info">'+game.bracketNo+'</span><span class="teama">'+game.teamnames[0]+'</span><span class="teamb">'+game.teamnames[1]+'</span></div></div>');
+          });
+          group.append(round);
+        }
+        group.append('<div class="r' + (roundNumber + 1) + '"><div class="final"><div class="bracketbox"><span class="teamc">' + _.last(struct).teamnames[_.random(1)] + '</span></div></div></div>');
+        $('#' + bracketGroup).append(group);
 
-
-				function renderBracketsReverse(struct,bracketGroup) {
-					var roundNumber	= _.uniq(_.map(struct, function(s) { return s.roundNo; })).length;
-					// var roundNum
-					var group	= $('<div class="group'+(roundNumber+1)+'" id="b'+bracketCount+'"></div>'),
-						grouped = _.groupBy(struct, function(s) { return s.roundNo; });
-						group.append('<div class="r'+(roundNumber+1)+'"><div class="final"><div class="bracketbox"><span class="teamc">'+' '+'</span></div></div></div>');
-						// group.append('<div class="r'+(roundNumber+1)+'"><div class="final"><div class="bracketbox"><span class="teamc">'+_.last(struct).teamnames[_.random(1)]+'</span></div></div></div>');
-
-					for(iround=roundNumber;iround>0;iround--) {
-						var round = $('<div class="r'+iround+'"></div>');
-						_.each(grouped[iround], function(game) {
-							if(game.bye)
-								round.append('<div></div>');
-							else
-							round.append('<div><div class="bracketboxrev"><span class="teama">'+game.teamnames[0]+'</span><span class="teamb">'+game.teamnames[1]+'</span></div></div>');
-							console.log('round = ', game);
-								// round.append('<div><div class="bracketbox"><span class="info">'+game.bracketNo+'</span><span class="teama">'+game.teamnames[0]+'</span><span class="teamb">'+game.teamnames[1]+'</span></div></div>');
-						});
-						group.append(round);
-					}
-					$('#'+bracketGroup).append(group);
-
-					bracketCount++;
-					$('html,body').animate({
-						scrollTop: $("#b"+(bracketCount-1)).offset().top
-					});
-				}
+        bracketCount++;
+        $('html,body').animate({
+          scrollTop: $("#b" + (bracketCount - 1)).offset().top
+        });
+      }
 
 
-				// $('#add').on('click', function() {
-				// 	var opts = parseInt(prompt('Bracket size (number of teams):',16));
-				//
-				// 	if(!_.isNaN(opts) && opts <= _.last(knownBrackets))
-				// 		getBracket(opts);
-				// 	else
-				// 		alert('The bracket size you specified is not currently supported.');
-				// });
+      function renderBracketsReverse(struct, bracketGroup) {
+        var roundNumber = _.uniq(_.map(struct, function(s) {
+          return s.roundNo;
+        })).length;
+        // var roundNum
+        var group = $('<div class="group' + (roundNumber + 1) + '" id="b' + bracketCount + '"></div>'),
+          grouped = _.groupBy(struct, function(s) {
+            return s.roundNo;
+          });
+        group.append('<div class="r' + (roundNumber + 1) + '"><div class="final"><div class="bracketbox"><span class="teamc">' + ' ' + '</span></div></div></div>');
+        // group.append('<div class="r'+(roundNumber+1)+'"><div class="final"><div class="bracketbox"><span class="teamc">'+_.last(struct).teamnames[_.random(1)]+'</span></div></div></div>');
 
-			});
+        for (iround = roundNumber; iround > 0; iround--) {
+          var round = $('<div class="r' + iround + '"></div>');
+          _.each(grouped[iround], function(game) {
+            if (game.bye)
+              round.append('<div></div>');
+            else
+              round.append('<div><div class="bracketboxrev"><span class="teama">' + game.teamnames[0] + '</span><span class="teamb">' + game.teamnames[1] + '</span></div></div>');
+            console.log('round = ', game);
+            // round.append('<div><div class="bracketbox"><span class="info">'+game.bracketNo+'</span><span class="teama">'+game.teamnames[0]+'</span><span class="teamb">'+game.teamnames[1]+'</span></div></div>');
+          });
+          group.append(round);
+        }
+        $('#' + bracketGroup).append(group);
 
-
-		</script>
-		<style type="text/css">
-			html, body, .brackets {
-				width: 100%;
-				min-height: 100%;
-				font-family: "Arial", sans-serif;
-				line-height: 1;
-			}
-			.metroBtn {
-				background-color: #2E7BCC;
-				color: #fff;
-				font-size: 1.1em;
-				padding: 10px;
-				display: inline-block;
-				margin-bottom: 30px;
-				cursor: pointer;
-			}
-			.brackets > div {
-				vertical-align: top;
-				clear: both;
-			}
-			.brackets > div > div {
-				float: left;
-				height: 100%;
-			}
-			.brackets > div > div > div {
-				margin: 30px 0;
-			}
-			.brackets div.bracketbox {
-				position: relative;
-				width: 100%; height: 100%;
-				border-top: 1px solid #555;
-				border-right: 1px solid #555;
-				border-bottom: 1px solid #555;
-			}
-			.brackets div.bracketbox > span.info {
-				position: absolute;
-				top: 25%;
-				left: 25%;
-				font-size: 0.8em;
-				color: #BBB;
-			}
-			.brackets div.bracketbox > span {
-				position: absolute;
-				left: 5px;
-				font-size: 0.85em;
-			}
-			.brackets div.bracketbox > span.teama {
-				top: -20px;
-			}
-			.brackets div.bracketbox > span.teamb {
-				bottom: +5px;
-			}
-			.brackets div.bracketbox > span.teamc {
-				bottom: 1px;
-			}
-			.brackets div.bracketboxrev {
-				position: relative;
-				width: 100%; height: 100%;
-				border-top: 1px solid #555;
-				border-left: 1px solid #555;
-				border-bottom: 1px solid #555;
-			}
-			.brackets div.bracketboxrev > span.info {
-				position: absolute;
-				top: 25%;
-				left: 25%;
-				font-size: 0.8em;
-				color: #BBB;
-			}
-			.brackets div.bracketboxrev > span {
-				position: absolute;
-				left: 5px;
-				font-size: 0.85em;
-			}
-			.brackets div.bracketboxrev > span.teama {
-				top: -20px;
-			}
-			.brackets div.bracketboxrev > span.teamb {
-				bottom: +5px;
-			}
-			.brackets div.bracketboxrev > span.teamc {
-				bottom: 1px;
-			}
-			.brackets > .group2 {
-				height: 260px;
-			}
-			.brackets > .group2 > div {
-				width: 49%;
-			}
-			.brackets > .group3 {
-				height: 320px;
-			}
-			.brackets > .group3 > div {
-				width: 32.7%;
-			}
-			.brackets > .group4 > div {
-				width: 24.5%;
-			}
-			.brackets > .group5 > div {
-				width: 19.6%;
-			}
-			.brackets > .group6 {
-				height: 1000px;
-			}
-			.brackets > .group6 > div {
-				width: 16.3%;
-			}
-			.brackets > div > .r1 > div {
-				height: 30px;
-				margin: 30px 0 0 0 ;
-			}
-			.brackets > div > .r2 > div {
-				margin: 45px 0 60px 0;
-				height: 60px;
-			}
-			.brackets > div > .r3 > div {
-				margin: 80px 0 120px 0;
-				height: 120px;
-			}
-			.brackets > div > .r4 > div {
-				margin: 140px 0 240px 0;
-				height: 240px;
-			}
-			.brackets > div > .r5 > div {
-				margin: 260px 0 0 0;
-				height: 480px;
-			}
-			.brackets > div > .r6 > div {
-				margin: 480px 0 0 0;
-			}
-			.brackets div.final > div.bracketbox {
-				border-top: 0px;
-				border-right: 0px;
-				height: 0px;
-			}
-			.brackets > div > .r4 > div.drop {
-				height: 180px;
-				margin-bottom: 0px;
-			}
-			.brackets > div > .r5 > div.final.drop {
-				margin-top: 345px;
-				margin-bottom: 0px;
-				height: 1px;
-			}
-			.brackets > div > div > div:last-of-type {
-				margin-bottom: 0px;
-			}
-		</style>
-	</head>
+        bracketCount++;
+        $('html,body').animate({
+          scrollTop: $("#b" + (bracketCount - 1)).offset().top
+        });
+      }
 
 
-	<nav class="navbar navbar-default">
-		<div class="container-fluid">
-			<!-- Brand and toggle get grouped for better mobile display -->
-			<div class="navbar-header">
-				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+      // $('#add').on('click', function() {
+      // 	var opts = parseInt(prompt('Bracket size (number of teams):',16));
+      //
+      // 	if(!_.isNaN(opts) && opts <= _.last(knownBrackets))
+      // 		getBracket(opts);
+      // 	else
+      // 		alert('The bracket size you specified is not currently supported.');
+      // });
+
+    });
+  </script>
+  <style type="text/css">
+    html,
+    body,
+    .brackets {
+      width: 100%;
+      min-height: 100%;
+      font-family: "Arial", sans-serif;
+      line-height: 1;
+    }
+
+    .metroBtn {
+      background-color: #2E7BCC;
+      color: #fff;
+      font-size: 1.1em;
+      padding: 10px;
+      display: inline-block;
+      margin-bottom: 30px;
+      cursor: pointer;
+    }
+
+    .brackets>div {
+      vertical-align: top;
+      clear: both;
+    }
+
+    .brackets>div>div {
+      float: left;
+      height: 100%;
+    }
+
+    .brackets>div>div>div {
+      margin: 30px 0;
+    }
+
+    .brackets div.bracketbox {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-top: 1px solid #555;
+      border-right: 1px solid #555;
+      border-bottom: 1px solid #555;
+    }
+
+    .brackets div.bracketbox>span.info {
+      position: absolute;
+      top: 25%;
+      left: 25%;
+      font-size: 0.8em;
+      color: #BBB;
+    }
+
+    .brackets div.bracketbox>span {
+      position: absolute;
+      left: 5px;
+      font-size: 0.85em;
+    }
+
+    .brackets div.bracketbox>span.teama {
+      top: -20px;
+    }
+
+    .brackets div.bracketbox>span.teamb {
+      bottom: +5px;
+    }
+
+    .brackets div.bracketbox>span.teamc {
+      bottom: 1px;
+    }
+
+    .brackets div.bracketboxrev {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-top: 1px solid #555;
+      border-left: 1px solid #555;
+      border-bottom: 1px solid #555;
+    }
+
+    .brackets div.bracketboxrev>span.info {
+      position: absolute;
+      top: 25%;
+      left: 25%;
+      font-size: 0.8em;
+      color: #BBB;
+    }
+
+    .brackets div.bracketboxrev>span {
+      position: absolute;
+      left: 5px;
+      font-size: 0.85em;
+    }
+
+    .brackets div.bracketboxrev>span.teama {
+      top: -20px;
+    }
+
+    .brackets div.bracketboxrev>span.teamb {
+      bottom: +5px;
+    }
+
+    .brackets div.bracketboxrev>span.teamc {
+      bottom: 1px;
+    }
+
+    .brackets>.group2 {
+      height: 260px;
+    }
+
+    .brackets>.group2>div {
+      width: 49%;
+    }
+
+    .brackets>.group3 {
+      height: 320px;
+    }
+
+    .brackets>.group3>div {
+      width: 32.7%;
+    }
+
+    .brackets>.group4>div {
+      width: 24.5%;
+    }
+
+    .brackets>.group5>div {
+      width: 19.6%;
+    }
+
+    .brackets>.group6 {
+      height: 1000px;
+    }
+
+    .brackets>.group6>div {
+      width: 16.3%;
+    }
+
+    .brackets>div>.r1>div {
+      height: 30px;
+      margin: 30px 0 0 0;
+    }
+
+    .brackets>div>.r2>div {
+      margin: 45px 0 60px 0;
+      height: 60px;
+    }
+
+    .brackets>div>.r3>div {
+      margin: 80px 0 120px 0;
+      height: 120px;
+    }
+
+    .brackets>div>.r4>div {
+      margin: 140px 0 240px 0;
+      height: 240px;
+    }
+
+    .brackets>div>.r5>div {
+      margin: 260px 0 0 0;
+      height: 480px;
+    }
+
+    .brackets>div>.r6>div {
+      margin: 480px 0 0 0;
+    }
+
+    .brackets div.final>div.bracketbox {
+      border-top: 0px;
+      border-right: 0px;
+      height: 0px;
+    }
+
+    .brackets>div>.r4>div.drop {
+      height: 180px;
+      margin-bottom: 0px;
+    }
+
+    .brackets>div>.r5>div.final.drop {
+      margin-top: 345px;
+      margin-bottom: 0px;
+      height: 1px;
+    }
+
+    .brackets>div>div>div:last-of-type {
+      margin-bottom: 0px;
+    }
+  </style>
+</head>
+
+
+<nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <!-- Brand and toggle get grouped for better mobile display -->
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
 					<span class="sr-only">Toggle navigation</span>
 					<span class="icon-bar"></span>
 					<span class="icon-bar"></span>
 					<span class="icon-bar"></span>
 				</button>
-				<!-- <a class="navbar-brand" href="#">Room Conditions</a> -->
-			</div>
-			<!-- Collect the nav links, forms, and other content for toggling -->
-			<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-				<ul class="nav navbar-nav ">
-					<li><a href="#" target="_blank">Autopopulate</a></li>
-					<li><a href="#" target="_blank">Suggest Next Bracket</a></li>
-					<!-- <li><a href="#">Local Radar</a></li> -->
-					<li class="dropdown">
-						<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"> Back-test Year <span class="caret"></span></a>
-						<ul class="dropdown-menu">
-							{% for year in years %}
-							<li><a href="/year/{{year}}" target="#">{{year}}</a></li>
-							{% endfor %}
-						</ul>
-					</li>
+      <!-- <a class="navbar-brand" href="#">Room Conditions</a> -->
+    </div>
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <ul class="nav navbar-nav ">
+        <li><a href="#" target="_blank">Autopopulate</a></li>
+        <li><a href="#" target="_blank">Suggest Second Bracket</a></li>
+        <!-- <li><a href="#">Local Radar</a></li> -->
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"> Back-test Year <span class="caret"></span></a>
+          <ul class="dropdown-menu">
+            {% for year in years %}
+            <li><a href="/year/{{year}}" target="#">{{year}}</a></li>
+            {% endfor %}
+          </ul>
+        </li>
 
-				</ul>
-			</div><!-- /.navbar-collapse -->
-		</div><!-- /.container-fluid -->
-	</nav>
-	</div>
+      </ul>
+    </div>
+    <!-- /.navbar-collapse -->
+  </div>
+  <!-- /.container-fluid -->
+</nav>
+</div>
 
-	<body>
+<body>
 
-		<!-- <div id="add" class="metroBtn">Generate second Bracket</div> -->
+  <!-- <div id="add" class="metroBtn">Generate second Bracket</div> -->
 
-		<div class="container">
-      <div class="jumbotron">
+  <div class="container">
+    <div class="jumbotron">
+      <center>
         <h4>
           <!-- <div class="col-lg-2"> -->
-          <center>
-          Mad-brackets {{ year }} - your key to getting a great second bracket for March Madness
-        </center>
-        <!-- </div> -->
-      </h4>
+          Mad-brackets {{ year }}
+        </h4> <br> your key to getting a great second bracket for March Madness
+        <!-- </h4> -->
+      </center>
+    </div>
+  </div>
+  <div class="container">
+    <div class="col-lg-6">
+      <!-- <div class='col-xs-6'> -->
+      <div class="brackets" id="LB" style="width:100%">
       </div>
     </div>
-      <div class="container">
-			<div class="col-lg-6">
-			<!-- <div class='col-xs-6'> -->
-				<div class="brackets" id="LB" style="width:100%">
-				</div>
-			</div>
-			<div class="col-lg-6">
-			<!-- <div class='col-xs-6'> -->
-				<div class="brackets" id="RB" style="width:100%">
-				</div>
-			</div>
-		</div>
-	</body>
+    <div class="col-lg-6">
+      <!-- <div class='col-xs-6'> -->
+      <div class="brackets" id="RB" style="width:100%">
+      </div>
+    </div>
+  </div>
+</body>
+
 </html>

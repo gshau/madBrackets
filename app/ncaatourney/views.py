@@ -7,8 +7,6 @@ import psycopg2
 
 import model
 
-# from a_Model import ModelIt
-
 user='gshau'
 host='localhost'
 dbname='birth_db'
@@ -19,6 +17,8 @@ engine = create_engine('postgres://%s@localhost/%s'%(username,dbname))
 
 year='2017'
 years = model.getYears()
+
+pointsByRound=[1,2,4,8,16,32]
 
 def fetchTeam(year):
     df=model.loadTourney(year)
@@ -35,7 +35,6 @@ def fetchTeam(year):
 @app.route('/index')
 @app.route('/year/<int:year>')
 def index(year=2017):
-
     viewData = fetchTeam(year)
     return render_template("bracket_template.html",
        data = viewData, year = year, years = years)
