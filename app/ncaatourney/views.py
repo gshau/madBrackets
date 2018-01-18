@@ -35,6 +35,32 @@ def fetchTeam(year):
 @app.route('/index')
 @app.route('/year/<int:year>')
 def index(year=2017):
+        tourney = model.initializeTourney(year=year)
+        bracket=tourney.simulate()
+        viewData = fetchTeam(year)
+
+        initialBracket={1: bracket[1], 2: ['']*32, 3: ['']*16, 4: ['']*8, 5: ['']*4, 6: ['']*2, 7: ['']*1}
+
+        # print(bracket)
+        return render_template("bracket_template.html",
+           data = viewData, bracket=initialBracket, year = year, years = years)
+
+
+@app.route('/populate/<int:year>')
+def populate(year=2017):
+    tourney = model.initializeTourney(year=year)
+    bracket=tourney.simulate()
     viewData = fetchTeam(year)
+    # print(bracket)
     return render_template("bracket_template.html",
-       data = viewData, year = year, years = years)
+       data = viewData, bracket=bracket, year = year, years = years)
+
+@app.route('/generate/<int:year>')
+def generate(year=2017):
+    tourney = model.initializeTourney(year=year)
+    bracket=tourney.simulate()
+    viewData = fetchTeam(year)
+    favBracket,newBracket,payout1,payout2=model.simulatePool(tourney,poolSize=25,entry=1,scaleFactor=0.3,payoutPct=[.7,.2,.1])
+    # print(newBracket)
+    return render_template("second_bracket_template.html",
+       data = viewData, bracket=newBracket, year = year, years = years, payout=[round(payout1,2),round(payout2,2)])
