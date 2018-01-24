@@ -16,36 +16,23 @@ features = [f.replace('%','') for f in features]
 
 featuresNamed = features+['name','fullName']
 
-
-
-def loadTourney(year):
-    df=pd.read_sql('SELECT * FROM tourney_team_'+str(year), engine,index_col='index')
+def loadFromDB(year,dbName='team_data'):
+    try:
+        df=pd.read_sql('SELECT * FROM '+dbName+'_'+str(year), engine,index_col='index')
+    except:
+        print('Could not find teams in database')
+        return None
+    if dbName == 'team_data':
+        return df[featuresNamed]
     return df
-
-def loadTeamData(year):
-    df=pd.read_sql('SELECT * FROM team_data_'+str(year), engine,index_col='index')
-    df[featuresNamed]
-    return df[featuresNamed]
 
 def getYears():
     df=pd.read_sql("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';", engine)
     yearList=sorted(np.unique(np.array([int(tn.split('_')[-1]) if 'team' in tn else 0 for tn in df.table_name.values])),reverse=True)[:-1]
     return yearList
 
-def initializeTourney(year=2017):
 
-    teamData=loadTeamData(year)
-    teamNamesInTourney = loadTourney(year)
-    teamNames=teamNamesInTourney.teamName.values
-    teamList=[]
-    for teamName in teamNames:
-        properties = teamData[teamData.name==teamName][features]
-        teamList.append(Team(teamName,properties))
 
-    tourney=Tournament(teamList)
-    clf = joblib.load('model.pkl')
-    tourney.setModel(clf)
-    return tourney
 
 def logit(x):
     return 1./(1.+np.exp(-x))
@@ -53,13 +40,67 @@ def logit(x):
 def logitInv(x):
     return -np.log((1.-x)/x)
 
-
 class Tournament:
-    def __init__(self,teamList):
+    def __init__(self,year=2017,regionOrder=None):
+        self.year = year
+        self.teamData=loadFromDB(self.year,dbName='team_data')
+        self.teamNamesInTourney = loadFromDB(self.year,dbName='tourney_team')
+        self.tourneyGames = loadFromDB(self.year,dbName='tourney_games')
+
+
+        if regionOrder:
+            self.regionOrder=regionOrder
+        else:
+            regionOrder=[]
+            finalFourOrder=self.tourneyGames[self.tourneyGames['round']==5][['name_1','name_2']].values.flatten()
+            for teamName in finalFourOrder:
+                regionOrder.append(self.teamNamesInTourney[self.teamNamesInTourney.teamName==teamName].regionName.values[0])
+            self.regionOrder=regionOrder
+
+
+        teamOrder=[]
+        for regionName in self.regionOrder:
+            teamOrder.append(self.teamNamesInTourney[self.teamNamesInTourney.regionName==regionName].teamName.values)
+        self.teamOrder=np.array(teamOrder).flatten()
+
+        teamList=[]
+        for teamName in self.teamOrder:
+            properties = self.teamData[self.teamData.name==teamName][features]
+            teamList.append(Team(teamName,properties))
+
         self.teamList = np.array(teamList)
         self.nTeams = len(teamList)
-#         self.teamDict =
 
+        self.initBracket()
+
+        clf = joblib.load('model.pkl')
+        self.setModel(clf)
+
+        self.scaler = joblib.load('scaler.pkl')
+
+    def initBracket(self):
+
+        games=self.tourneyGames[['name_1','name_2','round','region','outcome']]
+        bracket=dict([(i,[]) for i in np.arange(1,8)])
+        for region in self.regionOrder:
+            regionGames = games[games.region==region]
+            for rnd in np.arange(1,5):
+                gamesInRound = regionGames[regionGames['round']==rnd]
+                for game in gamesInRound.itertuples():
+                    bracket[rnd].append(game.name_1)
+                    bracket[rnd].append(game.name_2)
+        region='national'
+        regionGames = games[games.region==region]
+        for rnd in np.arange(5,7):
+            gamesInRound = regionGames[regionGames['round']==rnd]
+            for game in gamesInRound.itertuples():
+                bracket[rnd].append(game.name_1)
+                bracket[rnd].append(game.name_2)
+
+        outcome=gamesInRound.iloc[0]['outcome']
+        bracket[7]=[gamesInRound.values[0][1-outcome]]
+
+        self.bracketOutcome = bracket
 
     def getPairings(self,teamList):
         pairings=[]
@@ -71,33 +112,36 @@ class Tournament:
 
     def setModel(self,model):
         self.model = model
-#         self.scaler = scaler
 
     def predictGame(self,game):
-
         teamA=game[0].properties
         teamB=game[1].properties
-#         teamA.index=[0]
-#         teamB.index=[0]
 
         vec = teamA.values-teamB.values
-        outcome=logit(self.model.coef_.dot(vec.T))
+        vecScaled = self.scaler.transform(vec)
+        outcome=logit(self.model.coef_.dot(vecScaled.T)[0][0])
 
         return outcome
 
     def simulate(self,simLevel='favorite',scaleFactor=1):
-
+        '''Simulate tournament:
+        simLevel = simulation type - favorite vs. random
+        scaleFactor = scale probability dispersion:
+            if < 1 : Predictions of rare events become more likely
+            if > 1 : Predictions of rare events become less likely'''
         teamList = self.teamList
         nTeamRemain = len(teamList)
         nRound = 1
         teamLists={}
         teamNameLists={}
+        entropyLists={}
         teamLists[nRound]=teamList
-        teamNameLists={1: [t.name for t in self.teamList]}
+        teamNameLists={1: [t.name for t in teamList]}
         while nTeamRemain > 1:
             pairs = self.getPairings(teamList)
             teamList=[]
             teamNameList=[]
+            entropyList=[]
             for p in pairs:
                 prob = self.predictGame(p)
                 if simLevel=='favorite':
@@ -105,17 +149,25 @@ class Tournament:
                 else:
                     probThr = np.random.rand()
                 if scaleFactor != 1:
-                    probThr = logit(scaleFactor*logitInv(probThr))
+                    prob = logit(scaleFactor*logitInv(prob))
                 if prob > probThr:
                     teamList.append(p[0])
                     teamNameList.append(p[0].name)
+                    entropyList.append(prob*np.log(prob))
                 else:
                     teamList.append(p[1])
                     teamNameList.append(p[1].name)
+                    entropyList.append((1.-prob)*np.log(1.-prob))
             nRound+=1
             teamLists[nRound]=teamList
             teamNameLists[nRound]=teamNameList
+            entropyLists[nRound]=entropyList
             nTeamRemain = len(teamList)
+
+        self.entropyLists=entropyLists
+        self.teamLists = teamLists
+        self.teamNameLists = teamNameLists
+
 
         return teamNameLists
 
@@ -125,69 +177,120 @@ class Team:
         self.name=name
         self.properties=properties
 
-
-# class Game:
-#     def __init__(self,team1,team2):
-
 def compareBrackets(refBracket,newBracket,pointsByRound):
     points=0
     for iround in refBracket.keys():
         if iround==1:
             continue
-
         points+=len(set(newBracket[iround]) & set(refBracket[iround]))*pointsByRound[iround]
     return points
 
-def simulatePool(tourney,poolSize=15,entry=1,scaleFactor=0.1,payoutPct=[.7,.2,.1]):
-    tourneys=[tourney.simulate(simLevel='random') for ntourney in range(200)]
+class Pool:
+    def __init__(self,tourney,poolSize=15,pointSystem=None,payoutPct=[.7,.2,.1],risk=0.3,entryFee=1):
+        self.tourney = tourney
+        self.poolSize = poolSize
+        if pointSystem is None:
+            pointSystem=dict([(i+2, 2**i) for i in np.arange(6)])
+        self.pointSystem = pointSystem
 
-    pointsByRound=dict([(i+2, 2**i) for i in np.arange(6)])
-    placement1=[]
-    placement2=[]
-    favBracket=tourney.simulate()
-    newBracket=tourney.simulate(simLevel='random',scaleFactor=scaleFactor)
-    ranks=np.zeros((poolSize+2,poolSize+2))
-    for rep in range(poolSize*10):
-        refBracket=np.random.choice(tourneys,replace=True)
-        poolPoints=[]
-        for poolBracket in range(poolSize):
-            bracket=np.random.choice(tourneys,replace=True)
-            points=compareBrackets(refBracket,bracket,pointsByRound)
-            poolPoints.append(points)
-        poolPoints=np.array(poolPoints)
-        points1=compareBrackets(refBracket,favBracket,pointsByRound)
+        self.payoutPct = payoutPct
+        self.risk = risk
+        self.entryFee = entryFee
 
-        points2=compareBrackets(refBracket,newBracket,pointsByRound)
+    def getTourneySets(self,ntourney=400,scaleFactor=1):
+        self.tourneys=[self.tourney.simulate(simLevel='random',scaleFactor=scaleFactor) for ntourney in range(ntourney)]
+        joblib.dump(self.tourneys,'tourneys_'+str(self.tourney.year)+'.pkl')
 
-        poolPoints1=np.append(poolPoints,points2)
-        poolPoints2=np.append(poolPoints,points1)
+        print('Save: Tournament length: ',len(self.tourneys))
 
-        placement1.append((poolPoints1>points1).sum())
-        placement2.append((poolPoints2>points2).sum())
-        ranks[placement1,placement2]+=1
-    placement1=np.array(placement1)
-    placement2=np.array(placement2)
 
-    # vals1,bins,patch=plt.hist(placement1,bins=range(max(placement1)),normed=True);
-    # vals2,bins,patch=plt.hist(placement2,bins=range(max(placement2)),normed=True);
-    vals1,bins=np.histogram(placement1,bins=range(max(placement1)),normed=True);
-    vals2,bins=np.histogram(placement2,bins=range(max(placement2)),normed=True);
-    payout=np.zeros(poolSize)
-    payout[:len(payoutPct)]=payoutPct
-    payout1 = (vals1*payout[:max(placement1)-1]*entry*poolSize).sum()
-    payout2 = (vals2*payout[:max(placement2)-1]*entry*poolSize).sum()
-    print('Bracket 1:')
-    print('Placement odds: ',vals1[:5].cumsum())
-    print('Expected payout: ',(vals1*payout[:max(placement1)-1]*entry*poolSize).sum()    )
-    print('Bracket 2:')
-    print('Placement odds: ',vals2[:5].cumsum())
-    print('Expected payout: ',(vals2*payout[:max(placement2)-1]*entry*poolSize).sum()    )
+    def loadTourneySets(self):
+        self.tourneys=joblib.load('tourneys_'+str(self.tourney.year)+'.pkl')
+        print('Load: Tournament length: ',len(self.tourneys))
 
-    # plt.figure()
-    # sns.jointplot(placement1,placement2,stat_func=None)
-#     plt.imshow(ranks,origin='lower')
-#     return placement1,placement2
-    return(favBracket,newBracket,payout1,payout2)
-#     print(ranks)
-#     plt.hist(poolPoints,bins=np.arange(0,192,5));
-#     return (vals1*payout[:max(placement1)-1]*entry*poolSize).sum()   ,vals1[:3].sum()
+
+
+
+    def getGoodBracket(self,useRealBracket=False,verbose=False):
+
+        payout=[0,0]
+        while (payout[0] < 1) | (payout[1] < 1):
+            self.simulatePool(useRealBracket=useRealBracket,verbose=verbose,nrep=100)
+            payout = self.summary['expPayout']
+
+
+    def simulatePool(self,useRealBracket=False,verbose=True,nrep=100):
+        placements1=[]
+        placements2=[]
+        favBracket=self.tourney.simulate()
+        self.favEntropy = self.tourney.entropyLists.copy()
+        newBracket=self.tourney.simulate(simLevel='random',scaleFactor=1./self.risk)
+        self.newEntropy = self.tourney.entropyLists.copy()
+        ranks=np.zeros((self.poolSize+2,self.poolSize+2))
+        pointList1=[]
+        pointList2=[]
+        for rep in range(nrep):
+            if useRealBracket:
+                refBracket = self.tourney.bracketOutcome
+            else:
+                refBracket=np.random.choice(self.tourneys,replace=True)
+            poolPoints=[]
+            randSel=np.random.randint(0,len(self.tourneys),self.poolSize)
+            for irandBracket in randSel:
+                bracket=self.tourneys[irandBracket] #np.random.choice(self.tourneys,replace=True)
+                points=compareBrackets(refBracket,bracket,self.pointSystem)
+                poolPoints.append(points)
+            poolPoints=np.array(poolPoints)
+
+            points1=compareBrackets(refBracket,favBracket,self.pointSystem)
+            points2=compareBrackets(refBracket,newBracket,self.pointSystem)
+
+            pointList1.append(points1)
+            pointList2.append(points2)
+
+            poolPoints1=np.append(poolPoints,points2)
+            poolPoints2=np.append(poolPoints,points1)
+
+            points2
+
+            place1=(poolPoints1>points1).sum()
+            place2=(poolPoints2>points2).sum()
+
+            ranks[place1,place2]+=1
+
+            placements1.append(place1)
+            placements2.append(place2)
+        placements1=np.array(placements1)
+        placements2=np.array(placements2)
+
+
+        vals1,bins=np.histogram(placements1,bins=range(self.poolSize),normed=True);
+        vals2,bins=np.histogram(placements2,bins=range(self.poolSize),normed=True);
+        payout=np.zeros(self.poolSize-1)
+        payout[:len(self.payoutPct)]=self.payoutPct
+        payout1 = np.nansum((vals1*payout*self.entryFee*self.poolSize))
+        payout2 = np.nansum((vals2*payout*self.entryFee*self.poolSize))
+        if verbose:
+            print('Bracket 1:')
+            print('Bracket points: ',np.mean(pointList1))
+            print('Placement odds: ',vals1[:5].cumsum())
+            print('Expected payout: ',(vals1*payout*self.entryFee*self.poolSize).sum())
+            print('Bracket 2:')
+            print('Bracket points: ',np.mean(pointList2))
+            print('Placement odds: ',vals2[:5].cumsum())
+            print('Expected payout: ',(vals2*payout*self.entryFee*self.poolSize).sum())
+
+        norm = ranks.sum()
+        bustPCT= ranks[3:,3:].sum()/norm
+
+        self.summary = {}
+
+        self.summary['favBracket']=favBracket
+        self.summary['newBracket']=newBracket
+
+        self.summary['poolPoints']=np.array([poolPoints1,poolPoints2]).T
+
+        self.summary['expPayout']=np.array([payout1, payout2]).T
+        self.summary['expPlace']=np.array([vals1, vals2]).T
+        self.summary['ranks']=ranks
+        self.summary['bustPCT']=bustPCT
