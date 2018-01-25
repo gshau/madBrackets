@@ -214,9 +214,9 @@ class Pool:
     def getGoodBracket(self,useRealBracket=False,verbose=False):
 
         payout=[0,0]
-        while (payout[0] < 1) | (payout[1] < 1):
-            self.simulatePool(useRealBracket=useRealBracket,verbose=verbose,nrep=100)
-            payout = self.summary['expPayout']
+        # while (payout[0] < 1) | (payout[1] < 1):
+        self.simulatePool(useRealBracket=useRealBracket,verbose=verbose,nrep=2000)
+        payout = self.summary['expPayout']
 
 
     def simulatePool(self,useRealBracket=False,verbose=True,nrep=100):
@@ -263,7 +263,6 @@ class Pool:
         placements1=np.array(placements1)
         placements2=np.array(placements2)
 
-
         vals1,bins=np.histogram(placements1,bins=range(self.poolSize),normed=True);
         vals2,bins=np.histogram(placements2,bins=range(self.poolSize),normed=True);
         payout=np.zeros(self.poolSize-1)
@@ -273,12 +272,13 @@ class Pool:
         if verbose:
             print('Bracket 1:')
             print('Bracket points: ',np.mean(pointList1))
-            print('Placement odds: ',vals1[:5].cumsum())
-            print('Expected payout: ',(vals1*payout*self.entryFee*self.poolSize).sum())
+            print('Placement odds: ',vals1[:5])
+            # print(vals1,vals2,payout,self.entryFee,self.poolSize)
+            print('Expected payout: ',payout1)
             print('Bracket 2:')
             print('Bracket points: ',np.mean(pointList2))
-            print('Placement odds: ',vals2[:5].cumsum())
-            print('Expected payout: ',(vals2*payout*self.entryFee*self.poolSize).sum())
+            print('Placement odds: ',vals2[:5])
+            print('Expected payout: ',payout2)
 
         norm = ranks.sum()
         bustPCT= ranks[3:,3:].sum()/norm

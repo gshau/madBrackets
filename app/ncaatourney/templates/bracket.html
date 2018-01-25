@@ -1,0 +1,405 @@
+<html>
+
+<head>
+  <title>MAD-BRACKETS!
+ - your key to getting a great second bracket for March Madness</title>
+  <meta charset="utf-8">
+  <!-- <style>
+  button.team {
+    background:none!important;
+     border:none;
+     padding:0!important;
+
+    /*optional*/
+    font-family:arial,sans-serif; /*input has OS specific font-family*/
+     color:#069;
+     text-decoration:underline;
+     cursor:pointer;
+}</style> -->
+  <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+  <script src="../static/js/bootstrap.min.js"></script>
+  <!-- <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"> -->
+  <link rel="stylesheet" href="https://bootswatch.com/3/cerulean/bootstrap.min.css">
+  <link rel="stylesheet" type="text/css" href="../static/css/bracket.css">
+  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+  <script src="http://underscorejs.org/underscore-min.js"></script>
+
+  <script>
+  var bracket = {{bracket | safe }};
+  var firstBracket = {{firstBracket | safe }};
+  var bracketOutcome = {{bracketOutcome | safe }};
+  var maxTeam = [32, 16, 8, 4, 2, 1];
+    $(document).on('ready', function() {
+
+
+
+
+      var knownBrackets = [2, 4, 8, 16, 32],
+        teamsLB1 = {{bracket[1][:16] | safe}},
+        teamsLB2 = {{bracket[1][16:32] | safe}},
+        teamsRB1 = {{bracket[1][32:48] | safe}},
+        teamsRB2 = {{bracket[1][48:64] | safe}},
+        bracketCount = 0;
+      var seeds = [1, 16, 8, 9, 5, 12, 4, 13, 6, 11, 3, 14, 7, 10, 2, 15];
+      var opts = 32; //parseInt(prompt('Bracket size (number of teams):',16));
+      getBracket(opts, "LB", teamsLB1.concat(teamsLB2), seeds, bracket, false);
+      getBracket(opts, "RB", teamsRB1.concat(teamsRB2), seeds, bracket, true);
+
+      var payout = {{ payout | safe}};
+      var ptile0 = {{ ptile0 | safe}};
+      var ptile1 = {{ ptile1 | safe}};
+      var bustPCT = {{ bustPCT | safe}};
+      console.log(ptile0);
+
+      document.getElementById("payout0").textContent=Math.round(payout[0]*100)/100.;
+      document.getElementById("payout1").textContent=Math.round(payout[1]*100)/100.;
+
+
+      document.getElementById("ptile01").textContent=Math.round(ptile0[0]*100)+" %";
+      document.getElementById("ptile11").textContent=Math.round(ptile1[0]*100)+" %";
+      document.getElementById("ptile02").textContent=Math.round(ptile0[1]*100)+" %";
+      document.getElementById("ptile12").textContent=Math.round(ptile1[1]*100)+" %";
+      document.getElementById("ptile03").textContent=Math.round(ptile0[2]*100)+" %";
+      document.getElementById("ptile13").textContent=Math.round(ptile1[2]*100)+" %";
+
+      document.getElementById("bustPCT").append(Math.round(bustPCT*100)+" %");
+
+      $('#Champ').append('<div class="rChamp"><div class="Champ"><div><span id="rndChamp" class="teamc">' + bracket[7][0] + '</span></div></div></div>');
+      // $('#Champ').append('<div class="rChamp"><div class="Champ"><div class="bracketbox"><span class="teamc">' + bracket[7][0] + '</span></div></div></div>');
+
+      /*
+       * Build our bracket "model"
+       */
+      function getBracket(base, bracketGroup, teams, seeds, bracket, reverse) {
+
+        var closest = _.find(knownBrackets, function(k) {
+            return k >= base;
+          }),
+          byes = closest - base;
+
+        if (byes > 0) base = closest;
+
+        var brackets = [],
+          round = 1,
+          baseT = base / 2,
+          baseC = base / 2,
+          teamMark = 0,
+          nextInc = base / 2;
+
+        for (i = 1; i <= (base - 1); i++) {
+          var baseR = i / baseT,
+            isBye = false;
+
+          if (byes > 0 && (i % 2 != 0 || byes >= (baseT - i))) {
+            isBye = true;
+            byes--;
+          }
+
+          var last = _.map(_.filter(brackets, function(b) {
+            return b.nextGame == i;
+          }), function(b) {
+            return {
+              game: b.bracketNo,
+              teams: b.teamnames
+            };
+          });
+
+          brackets.push({
+            lastGames: round == 1 ? null : [last[0].game, last[1].game],
+            nextGame: nextInc + i > base - 1 ? null : nextInc + i,
+            teamnames: round == 1 ? [seeds[teamMark % 16] + '. ' + teams[teamMark], seeds[(teamMark + 1) % 16] + '. ' + teams[teamMark + 1]] : [last[0].teams[_.random(1)], last[1].teams[_.random(1)]],
+            bracketNo: i,
+            roundNo: round,
+            bye: isBye
+          });
+          teamMark += 2;
+          if (i % 2 != 0) nextInc--;
+          while (baseR >= 1) {
+            round++;
+            baseC /= 2;
+            baseT = baseT + baseC;
+            baseR = i / baseT;
+          }
+        }
+        renderBrackets(brackets, bracketGroup, bracket, reverse);
+      }
+
+      /*
+       * Inject our brackets
+       */
+      function renderBrackets(struct, bracketGroup, bracket, reverse) {
+      var roundNumber = _.uniq(_.map(struct, function(s) {
+          return s.roundNo;
+        })).length;
+
+
+        if (reverse){
+          bracketBoxType = "bracketboxrev";
+        } else {
+          bracketBoxType = "bracketbox";
+        }
+
+        console.log(bracketBoxType);
+
+        var group = $('<div class="group' + (roundNumber + 1) + '" id="b' + bracketCount + '"></div>'),
+          grouped = _.groupBy(struct, function(s) {
+            return s.roundNo;
+          });
+
+        if (reverse){
+          group.append('<div class="r' + (roundNumber + 1) + 'R"><div class="final"><div class="bracketbox"><span class="teamc" id="rnd7_slot1">' + bracket[roundNumber+1][1] + '</span></div></div></div>');
+          for (iround = roundNumber; iround > 0; iround--) {
+            var round = $('<div class="r' + iround + '"></div>');
+            var teamsInThisRound=bracket[iround];
+            console.log(teamsInThisRound);
+            for (iteam=maxTeam[iround]+1; iteam <= 2*maxTeam[iround]; iteam++){
+              round.append('<div><div class="'+bracketBoxType+'"><span class="teama" id="rnd'+iround+'_slot'+(2*iteam-2)+'">' + teamsInThisRound[2*iteam-2] + '</span><span class="teamb" id="rnd'+iround+'_slot'+(2*iteam-1)+'">' + teamsInThisRound[2*iteam-1] + '</span></div></div>');
+            }
+            group.append(round);
+          }
+        } else {
+            for (iround = 1; iround <= roundNumber; iround++) {
+              var round = $('<div class="r' + iround + '"></div>');
+              var teamsInThisRound=bracket[iround];
+              console.log(teamsInThisRound);
+              for (iteam=1; iteam <= maxTeam[iround]; iteam++){
+                round.append('<div><div class="'+bracketBoxType+'"><span class="teama" id="rnd'+iround+'_slot'+(2*iteam-2)+'">' + teamsInThisRound[2*iteam-2] + '</span><span class="teamb" id="rnd'+iround+'_slot'+(2*iteam-1)+'">' + teamsInThisRound[2*iteam-1] + '</span></div></div>');
+              }
+              group.append(round);
+            }
+
+            group.append('<div class="r' + (roundNumber + 1) + 'L"><div class="final"><div class="'+bracketBoxType+'"><span class="teamc"  id="rnd7_slot0">' + bracket[roundNumber+1][0] + '</span></div></div></div>');
+        }
+
+        $('#' + bracketGroup).append(group);
+        bracketCount++;
+      }
+      var MyButton = document.getElementById("MyButton");
+      MyButton.click();
+
+    });
+
+
+      //
+      // $(document).ready(function(){
+      //   $('#MyButton2').click(compareBrackets(bracketOutcome));
+      //   $('#MyButton').click(compareBrackets(firstBracket));
+      //
+      //
+      //
+      //
+      //
+      //     function compareBrackets(bracketToCompare){
+
+  $(document).ready(function(){
+    $('#MyButton').click(function(){
+
+      var sameClass = 'alert-success';
+      var firstClass = 'alert-info';
+      var secondClass = 'alert-warning';
+
+      for (irnd=2; irnd<7 ; irnd++){
+        var teamsInThisRound=firstBracket[irnd];
+        // var teamsInThisRound=bracketOutcome[irnd];
+        // console.log(teamsInThisRound);
+        var teamsCompareThisRound=bracket[irnd];
+        for (iteam=1; iteam <= 2*maxTeam[irnd]; iteam++) {
+          for (ipair=1; ipair<=2; ipair++){
+            var obj = document.getElementById('rnd'+irnd+'_slot'+(2*iteam-ipair));
+            if (teamsCompareThisRound[2*iteam - ipair] == teamsInThisRound[2*iteam - ipair]){
+              obj.innerHTML='<div class="'+sameClass+'">'+teamsInThisRound[2*iteam-ipair]+'</div>';
+            } else {
+              if (ipair == 2){
+              obj.innerHTML='<div style="position: absolute; top: -20px;"><div class="'+secondClass+'" >'+teamsInThisRound[2*iteam-ipair]+'</div><br><div class="'+firstClass+'">'+teamsCompareThisRound[2*iteam-ipair]+'</div></div>';
+            } else {
+              obj.innerHTML='<div class="'+secondClass+'">'+teamsInThisRound[2*iteam-ipair]+'</div><br><div class="'+firstClass+'">'+teamsCompareThisRound[2*iteam-ipair]+'</div>';
+            }
+          }
+        }
+      }
+    }
+
+    for (ipair=1;ipair<=2; ipair++){
+      var obj = document.getElementById('rnd7_slot'+(ipair-1));
+      var t2 =bracket[6][ipair-1], t1= firstBracket[6][ipair-1];
+      if (t1==t2){
+        obj.innerHTML='<div class="'+sameClass+'">'+t2+'</div>';
+      } else {
+        obj.innerHTML='<div style="position: absolute; top: -50px;"><div class="'+secondClass+'">'+t2+'</div><br><div class="'+firstClass+'">'+t1+'</div></div>';
+      }
+    }
+
+    var obj = document.getElementById('rndChamp');
+    var t2 =bracket[7][0], t1 = firstBracket[7][0];
+    if (t1==t2){
+      obj.innerHTML='<div class="'+sameClass+'">'+t2+'</div>';
+    } else {
+      obj.innerHTML='<div style="position: absolute; top: -10px;"><div class="'+secondClass+'">'+t2+'</div><br><div class="'+firstClass+'">'+t1+'</div></div>';
+    }
+
+
+
+
+
+    });
+  });
+  </script>
+
+</head>
+
+
+
+<nav class="navbar navbar-inverse">
+  <div class="container">
+    <!-- Brand and toggle get grouped for better mobile display -->
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="" aria-expanded="false">
+					<span class="sr-only">Toggle navigation</span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+				</button>
+    </div>
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <ul class="nav navbar-nav navbar-left">
+        <li><a href="#"> Mad-brackets! </a> </li>
+       <!-- - your key to getting a great second bracket for March Madness</a></li> -->
+        <!-- <li>
+          <a href="#popupInfo" class="btn btn-warning btn-lg">
+          <span class="glyphicon glyphicon-question-sign"></span> Info
+        </a>
+      </li> -->
+      </ul>
+      <ul class="nav navbar-nav ">
+        <!-- <li><a href="/">Start Over</a></li> -->
+        <!-- <li><a href="/pointSystem">Change point system</a></li> -->
+        <!-- <li><a href="/populate/{{year}}">Get Best Bracket</a></li> -->
+        <li><a href="/actualBracket/{{year}}" target="_blank" >Actual Winners</a></li>
+        <li class="dropdown">
+          <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"> Historical <span class="caret"></span></a>
+          <ul class="dropdown-menu">
+            {% for year in years %}
+            <li><a href="/year/{{year}}" target="">{{year}}</a></li>
+            {% endfor %}
+          </ul>
+        </li>
+        <li><a href="#"> About </a> </li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li><a href="/contact"> Contact </a> </li>
+      </ul>
+
+    </div>
+  </div>
+</nav>
+</div>
+
+<body>
+  <div class="container">
+    <div class="row">
+
+  <div class="col-xs-4">
+    <form action="/set_parms" method="get" id="set_parms" target="">
+      <div class="form-group">
+          <label for="poolSize">Size of pool</label>
+          <select class="form-control" name="poolSize" id="poolSize">
+            {% for poolSizeOption in poolSizes %}
+            <option value="{{poolSizeOption}}" {% if poolSizeOption == poolSize %} selected {% endif %}> {{poolSizeOption}}</option>
+            {% endfor %}
+          </select>
+        </div>      <center>Risk Level:</center>
+      <input type="range" name="risk" min="1" max="5" value="{{ risk * 5 }}">
+      <!-- <input type="number" name="poolSize" min="5" max="50" step="5"> -->
+      <input type="hidden" name="year" value="{{ year }}" />
+      <br>
+      <div class="container">
+        <button type="submit button" class="btn btn-info" form="set_parms">Get Another Bracket</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="container col-xs-4">
+    <center>
+      <!-- <h4>
+        Payout (for every dollar in):
+      </h4> -->
+      <!-- <div class="container col-sm-6"> -->
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col"><div id="bustPCT">Bust PCT: </div></th>
+              <th scope="col">Bracket 1</th>
+              <th scope="col">Bracket 2</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Payout per $ in</th>
+              <td><div id="payout0"></div></td>
+              <td><div id="payout1"></div></td>
+            </tr>
+            <tr>
+              <th scope="row">1st place %</th>
+              <td><div id="ptile01"></div></td>
+              <td><div id="ptile11"></div></td>
+            </tr>
+            <tr>
+              <th scope="row">2nd place %</th>
+              <td><div id="ptile02"></div></td>
+              <td><div id="ptile12"></div></td>
+            </tr>
+            <tr>
+              <th scope="row">3rd place %</th>
+              <td><div id="ptile03"></div></td>
+              <td><div id="ptile13"></div></td>
+            </tr>
+          </tbody>
+        </table>
+
+    </div>
+  <!-- </div> -->
+      <div class="col-xs-4">
+        <ul class="list-group">
+          <center>
+          <li class="list-group-item list-group-item-success">Teams common to both brackets </li>
+          <li class="list-group-item list-group-item-info">Teams only in Bracket 1</li>
+          <li class="list-group-item list-group-item-warning">Teams only in Bracket 2</li>
+        </center>
+        </ul>
+      </div>
+  </center>
+  </div>
+</div>
+</div>
+
+
+<div class="container">
+
+    <div class="row">
+    <div class="col-sm-6">
+      <div class="brackets" id="LB" style="width:100%">
+      </div>
+    </div>
+    <div class="col-sm-6">
+      <div class="brackets" id="RB" style="width:100%">
+      </div>
+    </div>
+  </div>
+  </div>
+   <div class="container ">
+    <div class="row">
+      <div class="col-sm-5"></div>
+  <div class="col-sm-2 col-sm-offset5" style="margin-top:-260; margin-left:40">
+    <div class="brackets" id="Champ" style="width:100%" >
+    </div>
+  </div>
+</div>
+
+
+
+
+</body>
+<input type="button" value="W" id="MyButton" hidden='on' >
+
+</html>

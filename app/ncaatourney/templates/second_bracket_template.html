@@ -25,9 +25,9 @@
       teamsRB2 = {{bracket[1][48:64] | safe}},
         bracketCount = 0;
       var seeds = [1, 16, 8, 9, 5, 12, 4, 13, 6, 11, 3, 14, 7, 10, 2, 15];
-      var opts = 32; //parseInt(prompt('Bracket size (number of teams):',16));
-      getBracket(opts, "LB", teamsLB1.concat(teamsLB2), seeds, bracket, false);
-      getBracket(opts, "RB", teamsRB1.concat(teamsRB2), seeds, bracket, true);
+      var baseSize = 32;
+      getBracket(baseSize, "LB", teamsLB1.concat(teamsLB2), seeds, bracket, false);
+      getBracket(baseSize, "RB", teamsRB1.concat(teamsRB2), seeds, bracket, true);
 
       var payout = {{ payout | safe}};
       var ptile0 = {{ ptile0 | safe}};
