@@ -4,21 +4,9 @@
   <title>MAD-BRACKETS!
  - your key to getting a great second bracket for March Madness</title>
   <meta charset="utf-8">
-  <!-- <style>
-  button.team {
-    background:none!important;
-     border:none;
-     padding:0!important;
 
-    /*optional*/
-    font-family:arial,sans-serif; /*input has OS specific font-family*/
-     color:#069;
-     text-decoration:underline;
-     cursor:pointer;
-}</style> -->
   <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
   <script src="../static/js/bootstrap.min.js"></script>
-  <!-- <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"> -->
   <link rel="stylesheet" href="https://bootswatch.com/3/cerulean/bootstrap.min.css">
   <link rel="stylesheet" type="text/css" href="../static/css/bracket.css">
   <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
@@ -302,29 +290,27 @@
   <div class="col-xs-4">
     <form action="/set_parms" method="get" id="set_parms" target="">
       <div class="form-group">
+        <center>
           <label for="poolSize">Size of pool</label>
+        </center>
           <select class="form-control" name="poolSize" id="poolSize">
             {% for poolSizeOption in poolSizes %}
             <option value="{{poolSizeOption}}" {% if poolSizeOption == poolSize %} selected {% endif %}> {{poolSizeOption}}</option>
             {% endfor %}
           </select>
-        </div>      <center>Risk Level:</center>
+        </div>      <center><b>Risk Level</b></center>
       <input type="range" name="risk" min="1" max="5" value="{{ risk * 5 }}">
       <!-- <input type="number" name="poolSize" min="5" max="50" step="5"> -->
       <input type="hidden" name="year" value="{{ year }}" />
       <br>
-      <div class="container">
-        <button type="submit button" class="btn btn-info" form="set_parms">Get Another Bracket</button>
-      </div>
+        <center>
+        <button type="submit button" class="btn btn-info" form="set_parms">Get some brackets!</button>
+      </center>
     </form>
   </div>
 
   <div class="container col-xs-4">
     <center>
-      <!-- <h4>
-        Payout (for every dollar in):
-      </h4> -->
-      <!-- <div class="container col-sm-6"> -->
         <table class="table">
           <thead>
             <tr>

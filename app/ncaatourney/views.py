@@ -40,10 +40,10 @@ def index(year=2017):
        firstBracket=initialBracket,
        bracketOutcome=tourney.bracketOutcome,
        year = year, years = years,
-       payout=['-','-','-','-'],
-       ptile0=['-','-','-','-'],
-       ptile1=['-','-','-','-'],
-       bustPCT = '0')
+       payout=[0,0,0,0],
+       ptile0=[0,0,0,0],
+       ptile1=[0,0,0,0],
+       bustPCT = '1')
            # bracket=initialBracket, year = year, years = years)
 
         # return render_template("bracket_template.html",

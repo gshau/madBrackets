@@ -15,6 +15,7 @@ features = joblib.load('features.pkl')
 features = [f.replace('%','') for f in features]
 
 featuresNamed = features+['name','fullName']
+featuresX = np.delete(featuresNamed,np.where(np.array(featuresNamed)=='seed')[0])
 
 def loadFromDB(year,dbName='team_data'):
     try:
@@ -23,7 +24,7 @@ def loadFromDB(year,dbName='team_data'):
         print('Could not find teams in database')
         return None
     if dbName == 'team_data':
-        return df[featuresNamed]
+        return df[featuresX]
     return df
 
 def getYears():
@@ -43,10 +44,13 @@ def logitInv(x):
 class Tournament:
     def __init__(self,year=2017,regionOrder=None):
         self.year = year
-        self.teamData=loadFromDB(self.year,dbName='team_data')
         self.teamNamesInTourney = loadFromDB(self.year,dbName='tourney_team')
         self.tourneyGames = loadFromDB(self.year,dbName='tourney_games')
+        self.teamData=loadFromDB(self.year,dbName='team_data')
 
+        self.teamData['seed']=-1
+        for r in self.teamNamesInTourney[['teamName','seed']].itertuples():
+            self.teamData.loc[self.teamData.name==r.teamName,'seed']=r.seed
 
         if regionOrder:
             self.regionOrder=regionOrder
@@ -205,7 +209,7 @@ class Pool:
 
 
     def loadTourneySets(self):
-        self.tourneys=joblib.load('tourneys_'+str(self.tourney.year)+'.pkl')
+        self.tourneys=joblib.load('data/tourneys_'+str(self.tourney.year)+'.pkl')
         print('Load: Tournament length: ',len(self.tourneys))
 
 
