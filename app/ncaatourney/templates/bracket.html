@@ -13,7 +13,7 @@
   <script src="http://underscorejs.org/underscore-min.js"></script>
 
   <script>
-  var bracket = {{bracket | safe }};
+  var secondBracket = {{secondBracket | safe }};
   var firstBracket = {{firstBracket | safe }};
   var bracketOutcome = {{bracketOutcome | safe }};
   var maxTeam = [32, 16, 8, 4, 2, 1];
@@ -23,15 +23,15 @@
 
 
       var knownBrackets = [2, 4, 8, 16, 32],
-        teamsLB1 = {{bracket[1][:16] | safe}},
-        teamsLB2 = {{bracket[1][16:32] | safe}},
-        teamsRB1 = {{bracket[1][32:48] | safe}},
-        teamsRB2 = {{bracket[1][48:64] | safe}},
+        teamsLB1 = {{secondBracket[1][:16] | safe}},
+        teamsLB2 = {{secondBracket[1][16:32] | safe}},
+        teamsRB1 = {{secondBracket[1][32:48] | safe}},
+        teamsRB2 = {{secondBracket[1][48:64] | safe}},
         bracketCount = 0;
       var seeds = [1, 16, 8, 9, 5, 12, 4, 13, 6, 11, 3, 14, 7, 10, 2, 15];
       var opts = 32; //parseInt(prompt('Bracket size (number of teams):',16));
-      getBracket(opts, "LB", teamsLB1.concat(teamsLB2), seeds, bracket, false);
-      getBracket(opts, "RB", teamsRB1.concat(teamsRB2), seeds, bracket, true);
+      getBracket(opts, "LB", teamsLB1.concat(teamsLB2), seeds, secondBracket, false);
+      getBracket(opts, "RB", teamsRB1.concat(teamsRB2), seeds, secondBracket, true);
 
       var payout = {{ payout | safe}};
       var ptile0 = {{ ptile0 | safe}};
@@ -52,12 +52,9 @@
 
       document.getElementById("bustPCT").append(Math.round(bustPCT*100)+" %");
 
-      $('#Champ').append('<div class="rChamp"><div class="Champ"><div><span id="rndChamp" class="teamc">' + bracket[7][0] + '</span></div></div></div>');
-      // $('#Champ').append('<div class="rChamp"><div class="Champ"><div class="bracketbox"><span class="teamc">' + bracket[7][0] + '</span></div></div></div>');
+      $('#Champ').append('<div class="rChamp"><div class="Champ"><div><span id="rndChamp" class="teamc">' + secondBracket[7][0] + '</span></div></div></div>');
 
-      /*
-       * Build our bracket "model"
-       */
+       // Build our bracket "model"
       function getBracket(base, bracketGroup, teams, seeds, bracket, reverse) {
 
         var closest = _.find(knownBrackets, function(k) {
@@ -167,30 +164,29 @@
 
     });
 
-
-      //
-      // $(document).ready(function(){
-      //   $('#MyButton2').click(compareBrackets(bracketOutcome));
-      //   $('#MyButton').click(compareBrackets(firstBracket));
-      //
-      //
-      //
-      //
-      //
-      //     function compareBrackets(bracketToCompare){
-
   $(document).ready(function(){
     $('#MyButton').click(function(){
+
+      // if (bracketOutcome.length == 0){
+      if (jQuery.isEmptyObject(bracketOutcome)){
+        $("#historicalComparison").hide();
+      }
+
 
       var sameClass = 'alert-success';
       var firstClass = 'alert-info';
       var secondClass = 'alert-warning';
 
+      var bracket1 = firstBracket;
+
+      var bracket2 = secondBracket;
+
+
       for (irnd=2; irnd<7 ; irnd++){
-        var teamsInThisRound=firstBracket[irnd];
+        var teamsInThisRound=bracket1[irnd];
         // var teamsInThisRound=bracketOutcome[irnd];
         // console.log(teamsInThisRound);
-        var teamsCompareThisRound=bracket[irnd];
+        var teamsCompareThisRound=bracket2[irnd];
         for (iteam=1; iteam <= 2*maxTeam[irnd]; iteam++) {
           for (ipair=1; ipair<=2; ipair++){
             var obj = document.getElementById('rnd'+irnd+'_slot'+(2*iteam-ipair));
@@ -209,7 +205,7 @@
 
     for (ipair=1;ipair<=2; ipair++){
       var obj = document.getElementById('rnd7_slot'+(ipair-1));
-      var t2 =bracket[6][ipair-1], t1= firstBracket[6][ipair-1];
+      var t2 =bracket2[6][ipair-1], t1= bracket1[6][ipair-1];
       if (t1==t2){
         obj.innerHTML='<div class="'+sameClass+'">'+t2+'</div>';
       } else {
@@ -218,7 +214,7 @@
     }
 
     var obj = document.getElementById('rndChamp');
-    var t2 =bracket[7][0], t1 = firstBracket[7][0];
+    var t2 =bracket2[7][0], t1 = bracket1[7][0];
     if (t1==t2){
       obj.innerHTML='<div class="'+sameClass+'">'+t2+'</div>';
     } else {
@@ -231,6 +227,123 @@
 
     });
   });
+
+
+  function compareHistorical(bracketComparison){
+    // $('#compareHistorical').click(function(){
+
+
+    if(bracketComparison=='first'){
+      var sameClass = 'alert-success';
+
+      var bracket1 = firstBracket;
+      var firstClass = 'alert-danger';
+
+      var bracket2 = bracketOutcome;
+      var secondClass = 'alert-info';
+
+      document.getElementById('legend1').className = "list-group-item list-group-item-success";
+      document.getElementById('legend2').className = "list-group-item list-group-item-danger";
+      document.getElementById('legend3').className = "list-group-item list-group-item-info";
+
+      document.getElementById('legend1').innerHTML = 'Correct pick';
+      document.getElementById('legend2').innerHTML = 'Wrong pick';
+      document.getElementById('legend3').innerHTML = 'Actual winner';
+
+      document.getElementById('button1').className = 'btn btn-warning btn-block';
+      document.getElementById('button2').className = 'btn btn-info btn-block';
+      document.getElementById('button12').className = 'btn btn-info btn-block';
+
+    } else if (bracketComparison=='second')
+    {
+      var sameClass = 'alert-success';
+
+      var bracket1 = secondBracket;
+      var firstClass = 'alert-danger';
+      var bracket2 = bracketOutcome;
+      var secondClass = 'alert-info';
+
+      document.getElementById('legend1').className = "list-group-item list-group-item-success";
+      document.getElementById('legend2').className = "list-group-item list-group-item-danger";
+      document.getElementById('legend3').className = "list-group-item list-group-item-info";
+
+      document.getElementById('legend1').innerHTML = 'Correct pick';
+      document.getElementById('legend2').innerHTML = 'Wrong pick';
+      document.getElementById('legend3').innerHTML = 'Actual winner';
+
+      document.getElementById('button1').className = 'btn btn-info btn-block';
+      document.getElementById('button2').className = 'btn btn-warning btn-block';
+      document.getElementById('button12').className = 'btn btn-info btn-block';
+
+    } else if (bracketComparison=='12')
+    {
+      var sameClass = 'alert-success';
+      var firstClass = 'alert-info';
+      var secondClass = 'alert-warning';
+
+      var bracket1 = firstBracket;
+      var bracket2 = secondBracket;
+
+      document.getElementById('legend1').className = "list-group-item list-group-item-success";
+      document.getElementById('legend2').className = "list-group-item list-group-item-info";
+      document.getElementById('legend3').className = "list-group-item list-group-item-warning";
+
+      document.getElementById('legend1').innerHTML = 'Teams common to both brackets';
+      document.getElementById('legend2').innerHTML = 'Teams only in bracket 1';
+      document.getElementById('legend3').innerHTML = 'Teams only in bracket 2';
+
+      document.getElementById('button1').className = 'btn btn-info btn-block';
+      document.getElementById('button2').className = 'btn btn-info btn-block';
+      document.getElementById('button12').className = 'btn btn-warning btn-block';
+
+    }
+
+
+
+      for (irnd=2; irnd<7 ; irnd++){
+        var teamsCompareThisRound=bracket1[irnd];
+        var teamsInThisRound=bracket2[irnd];
+        for (iteam=1; iteam <= 2*maxTeam[irnd]; iteam++) {
+          for (ipair=1; ipair<=2; ipair++){
+            var obj = document.getElementById('rnd'+irnd+'_slot'+(2*iteam-ipair));
+            if (teamsCompareThisRound[2*iteam - ipair] == teamsInThisRound[2*iteam - ipair]){
+              obj.innerHTML='<div class="'+sameClass+'">'+teamsInThisRound[2*iteam-ipair]+'</div>';
+            } else {
+              if (ipair == 2){
+              obj.innerHTML='<div style="position: absolute; top: -20px;"><div class="'+secondClass+'" >'+teamsInThisRound[2*iteam-ipair]+'</div><br><div class="'+firstClass+'">'+teamsCompareThisRound[2*iteam-ipair]+'</div></div>';
+            } else {
+              obj.innerHTML='<div class="'+secondClass+'">'+teamsInThisRound[2*iteam-ipair]+'</div><br><div class="'+firstClass+'">'+teamsCompareThisRound[2*iteam-ipair]+'</div>';
+            }
+          }
+        }
+      }
+    }
+
+    for (ipair=1;ipair<=2; ipair++){
+      var obj = document.getElementById('rnd7_slot'+(ipair-1));
+      var t2 =bracket2[6][ipair-1], t1= bracket1[6][ipair-1];
+      if (t1==t2){
+        obj.innerHTML='<div class="'+sameClass+'">'+t2+'</div>';
+      } else {
+        obj.innerHTML='<div style="position: absolute; top: -50px;"><div class="'+secondClass+'">'+t2+'</div><br><div class="'+firstClass+'">'+t1+'</div></div>';
+      }
+    }
+
+    var obj = document.getElementById('rndChamp');
+    var t2 =bracket2[7][0], t1 = bracket1[7][0];
+    if (t1==t2){
+      obj.innerHTML='<div class="'+sameClass+'">'+t2+'</div>';
+    } else {
+      obj.innerHTML='<div style="position: absolute; top: -10px;"><div class="'+secondClass+'">'+t2+'</div><br><div class="'+firstClass+'">'+t1+'</div></div>';
+    }
+  }
+
+
+
+
+
+    // });
+  // });
   </script>
 
 </head>
@@ -251,7 +364,7 @@
     <!-- Collect the nav links, forms, and other content for toggling -->
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       <ul class="nav navbar-nav navbar-left">
-        <li><a href="#"> Mad-brackets! </a> </li>
+        <li><a href="/"> Mad-brackets! </a> </li>
        <!-- - your key to getting a great second bracket for March Madness</a></li> -->
         <!-- <li>
           <a href="#popupInfo" class="btn btn-warning btn-lg">
@@ -263,7 +376,7 @@
         <!-- <li><a href="/">Start Over</a></li> -->
         <!-- <li><a href="/pointSystem">Change point system</a></li> -->
         <!-- <li><a href="/populate/{{year}}">Get Best Bracket</a></li> -->
-        <li><a href="/actualBracket/{{year}}" target="_blank" >Actual Winners</a></li>
+        <!-- <li><a href="/actualBracket/{{year}}" target="_blank" >Actual Winners</a></li> -->
         <li class="dropdown">
           <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"> Historical <span class="caret"></span></a>
           <ul class="dropdown-menu">
@@ -287,21 +400,25 @@
   <div class="container">
     <div class="row">
 
-  <div class="col-xs-4">
-    <form action="/set_parms" method="get" id="set_parms" target="">
+  <div class="col-xs-2 col-xs-offset-1">
+    <form action="/set_parms" method="get" id="set_parms" target="" oninput="range1value.value = risk.valueAsNumber">
       <div class="form-group">
         <center>
           <label for="poolSize">Size of pool</label>
         </center>
           <select class="form-control" name="poolSize" id="poolSize">
             {% for poolSizeOption in poolSizes %}
-            <option value="{{poolSizeOption}}" {% if poolSizeOption == poolSize %} selected {% endif %}> {{poolSizeOption}}</option>
+            <option value="{{poolSizeOption}}" {% if poolSizeOption == poolSize %} selected {% endif %}> <center>{{poolSizeOption}}</center></option>
             {% endfor %}
           </select>
-        </div>      <center><b>Risk Level</b></center>
-      <input type="range" name="risk" min="1" max="5" value="{{ risk * 5 }}">
+        </div>      <center><b>Bracket 2 Risk Level</b>
+          <!-- <output name="range1value" for="range1" >{{ risk }}</output> -->
+        </center>
+      <input type="range" name="risk" min="0" max="2" step="0.2" value="{{ risk }}">
+
       <!-- <input type="number" name="poolSize" min="5" max="50" step="5"> -->
       <input type="hidden" name="year" value="{{ year }}" />
+
       <br>
         <center>
         <button type="submit button" class="btn btn-info" form="set_parms">Get some brackets!</button>
@@ -309,7 +426,7 @@
     </form>
   </div>
 
-  <div class="container col-xs-4">
+  <div class="container col-xs-4 col-xs-offset-1">
     <center>
         <table class="table">
           <thead>
@@ -345,13 +462,28 @@
 
     </div>
   <!-- </div> -->
-      <div class="col-xs-4">
+      <div class="col-xs-2">
         <ul class="list-group">
           <center>
-          <li class="list-group-item list-group-item-success">Teams common to both brackets </li>
-          <li class="list-group-item list-group-item-info">Teams only in Bracket 1</li>
-          <li class="list-group-item list-group-item-warning">Teams only in Bracket 2</li>
-        </center>
+          <li id="legend1" class="list-group-item list-group-item-success">Teams common to both brackets </li>
+          <li id="legend2" class="list-group-item list-group-item-info">Teams only in Bracket 1</li>
+          <li id="legend3" class="list-group-item list-group-item-warning">Teams only in Bracket 2</li>
+        </ul>
+      </div>
+        <div id='historicalComparison' class="col-xs-2">
+        <ul class="list-group">
+        <!-- <div id='historicalComparison'> -->
+          <button type="submit button" id="button12" onclick="compareHistorical('12')" class="btn btn-warning btn-block" >Bracket 1 vs. Bracket 2</button>
+          <br>
+          <center> Historical Back-testing</center>
+
+          <center> Bracket 1 points: {{ points[0] }}</center>
+          <button type="submit button" id="button1" onclick="compareHistorical('first')" class="btn btn-info btn-block" >Bracket 1 vs. Historical</button>
+          <center> Bracket 2 points: {{ points[1] }}</center>
+          <button type="submit button" id="button2" onclick="compareHistorical('second')" class="btn btn-info btn-block" >Bracket 2 vs. Historical</button>
+        <!-- </div> -->
+      </center>
+
         </ul>
       </div>
   </center>
@@ -379,6 +511,9 @@
   <div class="col-sm-2 col-sm-offset5" style="margin-top:-260; margin-left:40">
     <div class="brackets" id="Champ" style="width:100%" >
     </div>
+    <div class="col-sm-2 col-sm-offset5" style="margin-top:-260; margin-left:40">
+      <div class="brackets" id="Champ" style="width:100%" >
+      </div>
   </div>
 </div>
 
