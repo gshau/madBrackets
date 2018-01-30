@@ -8,8 +8,9 @@ from sklearn.externals import joblib
 
 
 dbname = 'ncaabb'
-username = 'gshau'
-engine = create_engine('postgres://%s@localhost/%s'%(username,dbname))
+username = 'docker'
+passwd = 'docker'
+engine = create_engine('postgres://%s:%s@localhost/%s'%(username,passwd,dbname))
 
 features = joblib.load('features.pkl')
 features = [f.replace('%','') for f in features]

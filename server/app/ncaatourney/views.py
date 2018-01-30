@@ -11,9 +11,10 @@ import model
 user='gshau'
 host='localhost'
 dbname = 'ncaabb'
-username = 'gshau' # change this to your username
+username = 'docker' # change this to your username
+passwd = 'docker'
 
-engine = create_engine('postgres://%s@localhost/%s'%(username,dbname))
+engine = create_engine('postgres://%s:%s@localhost/%s'%(username,passwd,dbname))
 
 years = model.getYears()
 
