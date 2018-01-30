@@ -46,11 +46,11 @@ def index(year=2017):
            bustPCT = '1',
            points=[0,0])
 
-@app.route('/actualBracket/<int:year>')
-def actualBracket(year=2017):
-    tourney = model.Tournament(year=year)
-    return render_template("bracket_template.html",
-       bracket=tourney.bracketOutcome, year = year, years = years)
+# @app.route('/actualBracket/<int:year>')
+# def actualBracket(year=2017):
+#     tourney = model.Tournament(year=year)
+#     return render_template("bracket_template.html",
+#        bracket=tourney.bracketOutcome, year = year, years = years)
 
 
 @app.route('/')
