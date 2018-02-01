@@ -19,7 +19,11 @@
     margin-bottom: 30px;
     cursor: pointer;
   }
-
+  .navbar-nav.navbar-center {
+      position: absolute;
+      left: 50%;
+      transform: translatex(-50%);
+  }
   .brackets>div {
     vertical-align: top;
     clear: both;
@@ -58,14 +62,16 @@
   }
 
   .brackets div.bracketbox>span.teama {
-    top: -18px;
+    top: -20px;
     line-height: 10px;
+    width: 90%;
     }
 
   .brackets div.bracketbox>span.teamb {
-    bottom: +2px;
+    bottom: +3px;
     line-height: 10px;
-  }
+    width: 90%;
+}
 
   .brackets div.bracketbox>span.teamc {
     bottom: 1px;
@@ -95,13 +101,15 @@
   }
 
   .brackets div.bracketboxrev>span.teama {
-    top: -18px;
+    top: -20px;
     line-height: 10px;
+    width: 90%;
 }
 
   .brackets div.bracketboxrev>span.teamb {
-    bottom: +2px;
+    bottom: +3px;
     line-height: 10px;
+    width: 90%;
   }
 
   .brackets div.bracketboxrev>span.teamc {
@@ -113,7 +121,7 @@
   }
 
   .brackets>.group2>div {
-    width: 49%;
+    width: 60%;
   }
 
   .brackets>.group3 {
