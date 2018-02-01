@@ -1,5 +1,5 @@
 #!/bin/bash
-# Pull data from html-unlabelled table on kenpom's website
+# Pull data from html-unlabeled table on kenpom's website
 
 if [ "$#" -ne 2 ]; then
   echo "Wrong number of arguments.  Required: "
