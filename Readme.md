@@ -8,14 +8,14 @@ This repository contains both the exploratory analysis and web-app (under server
 ## This repo contains several exploratory Jupyter notebooks and the evolving web application.  
 
 Brief summary of these notebooks:
-- pullNCAAData_*: various scripts for web-scraping sports-reference.com and kenpom.com
-- tournamentScraper: Scraping of NCAA tournament games
-- initMadBrackets: initialize postgresql database from scraped data
-- teamAnalysis: exploratory analysis of team features
-- gameAnalysis: prediction of games with various models.  
-- fitDispersionPicks: fit prediction of games to survival odds in ESPN bracket challenge
-- modelTesting: Testbed for creating model
-- appModelTesting: test-bed for interfacing with model used on web app
+1.  pullNCAAData_*: various scripts for web-scraping sports-reference.com and kenpom.com
+1.  tournamentScraper: Scraping of NCAA tournament games
+1.  initMadBrackets: initialize postgresql database from scraped data
+1.  teamAnalysis: exploratory analysis of team features
+1.  gameAnalysis: prediction of games with various models.  
+1.  fitDispersionPicks: fit prediction of games to survival odds in ESPN bracket challenge
+1.  modelTesting: Testbed for creating model
+1.  appModelTesting: test-bed for interfacing with model used on web app
 
 
 Currently a work in progress!

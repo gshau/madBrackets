@@ -22,13 +22,14 @@ year=2017
 pointsByRound=[1,2,4,8,16,32]
 poolSizes=np.arange(5,101,5)
 
+# Entry route
 @app.route('/')
 # @app.route('/index')
 @app.route('/year/<int:year>')
 def index(year=2017):
+        # return default empty bracket, but with teams filled in
         tourney = model.Tournament(year=year)
         bracket=tourney.simulate()
-
         initialBracket={1: bracket[1], 2: ['']*32, 3: ['']*16, 4: ['']*8, 5: ['']*4, 6: ['']*2, 7: ['']*1}
         risk = 0.4
         poolSize=25
@@ -46,12 +47,6 @@ def index(year=2017):
            ptile1=[0,0,0,0],
            bustPCT = '1',
            points=[0,0])
-
-# @app.route('/actualBracket/<int:year>')
-# def actualBracket(year=2017):
-#     tourney = model.Tournament(year=year)
-#     return render_template("bracket_template.html",
-#        bracket=tourney.bracketOutcome, year = year, years = years)
 
 
 @app.route('/')
@@ -99,14 +94,6 @@ def setParms():
 def contact():
     return render_template("contact.html")
 
-# @app.route('/pointSystem')
-# def pointSystem():
-#     return render_template("point_system.html")
-
 @app.errorhandler(404)
 def page_not_found(error):
     return render_template('page_not_found.html'), 404
-
-# @app.errorhandler(500)
-# def page_not_found(error):
-#     return render_template('/')
