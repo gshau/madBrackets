@@ -19,10 +19,10 @@ featuresNamed = features+['name','fullName']
 featuresX = np.delete(featuresNamed,np.where(np.array(featuresNamed)=='seed')[0])
 
 def loadFromDB(year,dbName='team_data'):
-    '''Load SQL DB to pandas dataframe:
+    """Load SQL DB to pandas dataframe:
     Arguments:
      - year
-     - database name '''
+     - database name """
     try:
         df=pd.read_sql('SELECT * FROM '+dbName+'_'+str(year), engine,index_col='index')
     except:
@@ -33,25 +33,25 @@ def loadFromDB(year,dbName='team_data'):
     return df
 
 def getYears():
-    '''Look in DB and return list of years stored'''
+    """Look in DB and return list of years stored"""
     df=pd.read_sql("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';", engine)
     yearList=sorted(np.unique(np.array([int(tn.split('_')[-1]) if 'team' in tn else 0 for tn in df.table_name.values])),reverse=True)[:-1]
     return yearList
 
 def logit(x):
-    '''Logistic function'''
+    """Logistic function"""
     return 1./(1.+np.exp(-x))
 
 def logitInv(x):
-    '''Inverse of the logistic function'''
+    """Inverse of the logistic function"""
     return -np.log((1.-x)/x)
 
 class Tournament:
     def __init__(self,year=2017,regionOrder=None):
-    '''Tournament class
-    Arguments:
-     - year of tournament
-     - order of regions if not internally stored'''
+        """Tournament class
+        Arguments:
+        - year of tournament
+        - order of regions if not internally stored"""
         self.year = year
         self.teamNamesInTourney = loadFromDB(self.year,dbName='tourney_team')
         self.tourneyGames = loadFromDB(self.year,dbName='tourney_games')
@@ -92,7 +92,7 @@ class Tournament:
         self.scaler = joblib.load('scaler.pkl')
 
     def initBracket(self):
-    '''Initialize bracket with tournament teams'''
+        """Initialize bracket with tournament teams"""
 
         games=self.tourneyGames[['name_1','name_2','round','region','outcome']]
         bracket=dict([(i,[]) for i in np.arange(1,8)])
@@ -117,7 +117,7 @@ class Tournament:
         self.bracketOutcome = bracket
 
     def getPairings(self,teamList):
-    '''Transform a serial list of teams to pairings'''
+        """Transform a serial list of teams to pairings"""
         pairings=[]
         if len(teamList)==0:
             return pairings
@@ -126,11 +126,11 @@ class Tournament:
         return pairings
 
     def setModel(self,model):
-    '''Define the model used for prediction'''
+        """Define the model used for prediction"""
         self.model = model
 
     def predictGame(self,game):
-    '''Predict the result of a game based on the Logistic Regression model'''
+        """Predict the result of a game based on the Logistic Regression model"""
         teamA=game[0].properties
         teamB=game[1].properties
 
@@ -141,11 +141,11 @@ class Tournament:
         return outcome
 
     def simulate(self,simLevel='favorite',scaleFactor=1):
-        '''Simulate tournament:
+        """Simulate tournament:
         simLevel = simulation type - favorite vs. random
         scaleFactor = scale probability dispersion:
             if < 1 : Predictions of rare events become more likely
-            if > 1 : Predictions of rare events become less likely'''
+            if > 1 : Predictions of rare events become less likely"""
         teamList = self.teamList
         nTeamRemain = len(teamList)
         nRound = 1
@@ -191,12 +191,12 @@ class Tournament:
 
 class Team:
     def __init__(self,name,properties):
-    '''Simple team class'''
+        """Simple team class"""
         self.name=name
         self.properties=properties
 
 def compareBrackets(refBracket,newBracket,pointsByRound):
-    '''Compare two brackets and return the number of points based on the matching games'''
+    """Compare two brackets and return the number of points based on the matching games"""
     points=0
     for iround in refBracket.keys():
         if iround==1:
@@ -206,15 +206,15 @@ def compareBrackets(refBracket,newBracket,pointsByRound):
 
 class Pool:
     def __init__(self,tourney,poolSize=15,pointSystem=None,payoutPct=[.7,.2,.1],risk=0.3,entryFee=1):
-    '''Class for the pool
-    Arguments:
-     - tourney: Tournament class
-     - poolSize: number of entries in the pool
-     - pointSystem: points attributed to each round for a correctly picked game
-     - payoutPct: payout as a fraction of entry fee sums for top places
-     - risk: risk level - high values closer to 50-50 odds, lower closer to favored bracket
-     - entryFee: assumed entry fee of pool
-     '''
+        """Class for the pool
+        Arguments:
+         - tourney: Tournament class
+         - poolSize: number of entries in the pool
+         - pointSystem: points attributed to each round for a correctly picked game
+         - payoutPct: payout as a fraction of entry fee sums for top places
+         - risk: risk level - high values closer to 50-50 odds, lower closer to favored bracket
+         - entryFee: assumed entry fee of pool
+         """
         self.tourney = tourney
         self.poolSize = poolSize
         if pointSystem is None:
@@ -226,7 +226,7 @@ class Pool:
         self.entryFee = entryFee
 
     def getTourneySets(self,ntourney=400,scaleFactor=1):
-    '''Simulate tournaments and dump list to pickle file'''
+        """Simulate tournaments and dump list to pickle file"""
         self.tourneys=[self.tourney.simulate(simLevel='random',scaleFactor=scaleFactor) for ntourney in range(ntourney)]
         joblib.dump(self.tourneys,'tourneys_'+str(self.tourney.year)+'.pkl')
 
@@ -234,7 +234,7 @@ class Pool:
 
 
     def loadTourneySets(self):
-    '''Load tournament list from pickle file'''
+        """Load tournament list from pickle file"""
         self.tourneys=joblib.load('data/tourneys_'+str(self.tourney.year)+'.pkl')
         print('Load: Tournament length: ',len(self.tourneys))
 
@@ -242,7 +242,7 @@ class Pool:
 
 
     def getGoodBracket(self,useRealBracket=False,verbose=False):
-    '''Receive a good bracket'''
+        """Receive a good bracket"""
         payout=[0,0]
         # while (payout[0] < 1) | (payout[1] < 1):
         self.simulatePool(useRealBracket=useRealBracket,verbose=verbose,nrep=10000)
@@ -250,7 +250,7 @@ class Pool:
 
 
     def simulatePool(self,useRealBracket=False,verbose=True,nrep=100):
-    '''Simulate the pool'''
+        """Simulate the pool"""
         placements1=[]
         placements2=[]
         favBracket=self.tourney.simulate()
